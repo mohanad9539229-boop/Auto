@@ -1,114 +1,122 @@
--- [[ SLAXTB - Project ]]
+-- [[ SLAXTB - Official Script ]]
 -- [[ المطور: SLAX | قناة: Ezz.i1 ]]
 
 local player = game.Players.LocalPlayer
+local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
 
--- التأكد من وجود الشخصية
-local function getChar()
-    return player.Character or player.CharacterAdded:Wait()
-end
-
--- إنشاء الواجهة
+-- إنشاء الواجهة (نفس إعداداتك الأصلية)
 local gui = Instance.new("ScreenGui")
-gui.Name = "SLAXTB_OFFICIAL"
 gui.ResetOnSpawn = false
-gui.Parent = CoreGui
+gui.DisplayOrder = 999999
+gui.IgnoreGuiInset = true
+gui.Parent = player:WaitForChild("PlayerGui")
 
--- [[ تصميم الواجهة ]]
-local MainFrame = Instance.new("Frame", gui)
-MainFrame.Size = UDim2.new(0, 200, 0, 130)
-MainFrame.Position = UDim2.new(0.5, -100, 0.2, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
+-- [ قسم الانترو الفخم ]
+local introFrame = Instance.new("Frame", gui)
+introFrame.Size = UDim2.new(1, 0, 1, 0)
+introFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+introFrame.ZIndex = 200
 
-local Corner = Instance.new("UICorner", MainFrame)
-Corner.CornerRadius = UDim.new(0, 12)
+local titleLabel = Instance.new("TextLabel", introFrame)
+titleLabel.Size = UDim2.new(1, 0, 0, 90)
+titleLabel.Position = UDim2.new(0, 0, 0.5, -70)
+titleLabel.Text = "SLAXTB" -- الاسم الجديد
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextScaled = true
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.BackgroundTransparency = 1
+titleLabel.ZIndex = 206
 
-local Stroke = Instance.new("UIStroke", MainFrame)
-Stroke.Thickness = 2
-Stroke.Color = Color3.fromRGB(255, 40, 70) -- أحمر نيون
+-- [ واجهة التحكم العائمة ]
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 140, 0, 70)
+frame.Position = UDim2.new(0.02, 0, 0.02, 0)
+frame.BackgroundColor3 = Color3.fromRGB(15, 17, 26)
+frame.BackgroundTransparency = 1
+frame.Visible = false
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Text = "SLAXTB"
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 22
-Title.BackgroundTransparency = 1
+local button = Instance.new("TextButton", frame)
+button.Size = UDim2.new(1, -10, 1, -10)
+button.Position = UDim2.new(0, 5, 0, 5)
+button.BackgroundColor3 = Color3.fromRGB(160, 25, 45)
+button.Text = "OFF"
+button.TextColor3 = Color3.fromRGB(255, 120, 140)
+button.TextScaled = true
+button.Font = Enum.Font.GothamBold
+button.BackgroundTransparency = 1
+Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
 
-local ActionBtn = Instance.new("TextButton", MainFrame)
-ActionBtn.Size = UDim2.new(0, 150, 0, 40)
-ActionBtn.Position = UDim2.new(0.5, -75, 0, 55)
-ActionBtn.BackgroundColor3 = Color3.fromRGB(255, 40, 70)
-ActionBtn.Text = "OFF"
-ActionBtn.TextColor3 = Color3.new(1, 1, 1)
-ActionBtn.Font = Enum.Font.GothamBold
-ActionBtn.TextSize = 18
-Instance.new("UICorner", ActionBtn)
-
--- زر الصورة (سلاكس)
-local SlaxBtn = Instance.new("ImageButton", gui)
-SlaxBtn.Size = UDim2.new(0, 60, 0, 60)
-SlaxBtn.Position = UDim2.new(0.05, 0, 0.4, 0)
-SlaxBtn.Image = "rbxassetid://124253717157226" 
-SlaxBtn.BackgroundTransparency = 1
-SlaxBtn.Draggable = true
-Instance.new("UICorner", SlaxBtn).CornerRadius = UDim.new(1, 0)
-
--- [[ ميكانيكية السكربت - الهجوم واللحاق ]]
+-- [ محرك الهجوم واللحاق ]
 local enabled = false
+local currentTarget = nil
 
-ActionBtn.MouseButton1Click:Connect(function()
+button.MouseButton1Click:Connect(function()
     enabled = not enabled
-    ActionBtn.Text = enabled and "ON" or "OFF"
-    ActionBtn.BackgroundColor3 = enabled and Color3.fromRGB(50, 200, 100) or Color3.fromRGB(255, 40, 70)
+    button.Text = enabled and "ON" or "OFF"
+    button.BackgroundColor3 = enabled and Color3.fromRGB(20, 140, 70) or Color3.fromRGB(160, 25, 45)
 end)
 
-SlaxBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-end)
+-- وظيفة البحث عن الأهداف (تحديث كل 0.1 ثانية)
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if not enabled then currentTarget = nil continue end
+        
+        local char = player.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if not root then continue end
+        
+        local bestTarget = nil
+        local bestDist = math.huge
 
--- محرك العمل المستمر
-RunService.Stepped:Connect(function()
-    if not enabled then return end
-    
-    local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    
-    local root = char.HumanoidRootPart
-    local hum = char.Humanoid
-    local tool = char:FindFirstChildOfClass("Tool")
-    
-    local target = nil
-    local dist = 1000 -- مدى البحث
-
-    for _, v in pairs(game.Players:GetPlayers()) do
-        if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-            local tHum = v.Character:FindFirstChild("Humanoid")
-            if tHum and tHum.Health > 0 then
-                local d = (root.Position - v.Character.HumanoidRootPart.Position).Magnitude
-                if d < dist then
-                    dist = d
-                    target = v.Character.HumanoidRootPart
+        for _, v in pairs(game.Players:GetPlayers()) do
+            if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                local tHum = v.Character:FindFirstChild("Humanoid")
+                if tHum and tHum.Health > 0 then
+                    local d = (root.Position - v.Character.HumanoidRootPart.Position).Magnitude
+                    if d < bestDist then
+                        bestDist = d
+                        bestTarget = v
+                    end
                 end
             end
         end
+        currentTarget = bestTarget
     end
+end)
 
-    if target then
-        -- اللحاق بالهدف
-        hum:MoveTo(target.Position)
-        
-        -- تفعيل الأداة (الهجوم) إذا كان قريب
-        if dist < 10 and tool then
+-- محرك الحركة الفعلي (RenderStepped لضمان السلاسة)
+RunService.RenderStepped:Connect(function()
+    if not enabled or not currentTarget or not currentTarget.Character then return end
+    
+    local char = player.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local tRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+    
+    if hum and root and tRoot then
+        hum:MoveTo(tRoot.Position)
+        -- إذا كنت قريب جداً، فعل الأداة (تلقائي)
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool and (root.Position - tRoot.Position).Magnitude < 10 then
             tool:Activate()
         end
     end
 end)
 
-warn("SLAXTB: Script is Active and Ready!")
+-- [ تشغيل الانترو المختصر ]
+task.spawn(function()
+    task.wait(2)
+    TweenService:Create(introFrame, TweenInfo.new(1), {BackgroundTransparency = 1}):Play()
+    TweenService:Create(titleLabel, TweenInfo.new(1), {TextTransparency = 1}):Play()
+    task.wait(1)
+    introFrame:Destroy()
+    frame.Visible = true
+    TweenService:Create(frame, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
+    TweenService:Create(button, TweenInfo.new(0.5), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+end)
+
+warn("SLAXTB: Original Logic Loaded Successfully!")
