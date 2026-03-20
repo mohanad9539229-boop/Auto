@@ -1,122 +1,116 @@
--- [[ SLAXTB - Official Script ]]
--- [[ المطور: SLAX | قناة: Ezz.i1 ]]
+-- [[ SLAXTB - Ultra Luxury Fixed ]]
+-- [[ تم إصلاح تعليق الشاشة السوداء ]]
 
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
--- إنشاء الواجهة (نفس إعداداتك الأصلية)
-local gui = Instance.new("ScreenGui")
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "SLAXTB_ULTRA"
 gui.ResetOnSpawn = false
-gui.DisplayOrder = 999999
-gui.IgnoreGuiInset = true
-gui.Parent = player:WaitForChild("PlayerGui")
 
--- [ قسم الانترو الفخم ]
+-- إطار الانميشن
 local introFrame = Instance.new("Frame", gui)
 introFrame.Size = UDim2.new(1, 0, 1, 0)
-introFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-introFrame.ZIndex = 200
+introFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+introFrame.ZIndex = 100
+introFrame.BackgroundTransparency = 0 -- يبدأ أسود بالكامل
 
-local titleLabel = Instance.new("TextLabel", introFrame)
-titleLabel.Size = UDim2.new(1, 0, 0, 90)
-titleLabel.Position = UDim2.new(0, 0, 0.5, -70)
-titleLabel.Text = "SLAXTB" -- الاسم الجديد
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextScaled = true
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.BackgroundTransparency = 1
-titleLabel.ZIndex = 206
+local logo = Instance.new("TextLabel", introFrame)
+logo.Size = UDim2.new(1, 0, 0, 120)
+logo.Position = UDim2.new(0, 0, 0.45, 0)
+logo.Text = "SLAXTB"
+logo.Font = Enum.Font.SpecialElite
+logo.TextColor3 = Color3.fromRGB(255, 40, 70)
+logo.TextScaled = true
+logo.BackgroundTransparency = 1
+logo.TextTransparency = 1
 
--- [ واجهة التحكم العائمة ]
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 140, 0, 70)
-frame.Position = UDim2.new(0.02, 0, 0.02, 0)
-frame.BackgroundColor3 = Color3.fromRGB(15, 17, 26)
-frame.BackgroundTransparency = 1
-frame.Visible = false
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 14)
+-- واجهة التحكم (تكون مخفية في البداية)
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 160, 0, 60)
+mainFrame.Position = UDim2.new(0.05, 0, -0.2, 0) -- مكانها فوق الشاشة عشان تنزل بانميشن
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.Visible = false
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 15)
+local mainStroke = Instance.new("UIStroke", mainFrame)
+mainStroke.Thickness = 2
+mainStroke.Color = Color3.fromRGB(255, 40, 70)
 
-local button = Instance.new("TextButton", frame)
-button.Size = UDim2.new(1, -10, 1, -10)
-button.Position = UDim2.new(0, 5, 0, 5)
-button.BackgroundColor3 = Color3.fromRGB(160, 25, 45)
-button.Text = "OFF"
-button.TextColor3 = Color3.fromRGB(255, 120, 140)
-button.TextScaled = true
-button.Font = Enum.Font.GothamBold
-button.BackgroundTransparency = 1
-Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
+local toggleBtn = Instance.new("TextButton", mainFrame)
+toggleBtn.Size = UDim2.new(1, -10, 1, -10)
+toggleBtn.Position = UDim2.new(0, 5, 0, 5)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+toggleBtn.Text = "SLAX: OFF"
+toggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 18
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 12)
 
--- [ محرك الهجوم واللحاق ]
-local enabled = false
-local currentTarget = nil
-
-button.MouseButton1Click:Connect(function()
-    enabled = not enabled
-    button.Text = enabled and "ON" or "OFF"
-    button.BackgroundColor3 = enabled and Color3.fromRGB(20, 140, 70) or Color3.fromRGB(160, 25, 45)
+-- [ وظيفة الهجوم ]
+local active = false
+toggleBtn.MouseButton1Click:Connect(function()
+    active = not active
+    toggleBtn.Text = active and "SLAX: ON" or "SLAX: OFF"
+    TweenService:Create(toggleBtn, TweenInfo.new(0.3), {BackgroundColor3 = active and Color3.fromRGB(0, 180, 80) or Color3.fromRGB(150, 30, 50)}):Play()
+    mainStroke.Color = active and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(255, 40, 70)
 end)
 
--- وظيفة البحث عن الأهداف (تحديث كل 0.1 ثانية)
+-- [ تشغيل الانميشن مع حماية من التعليق ]
 task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if not enabled then currentTarget = nil continue end
-        
-        local char = player.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
-        if not root then continue end
-        
-        local bestTarget = nil
-        local bestDist = math.huge
+    -- ظهور الشعار
+    TweenService:Create(logo, TweenInfo.new(1), {TextTransparency = 0}):Play()
+    task.wait(2)
+    
+    -- اختفاء الشاشة السوداء غصب عنها (Safe Exit)
+    local fadeOut = TweenService:Create(introFrame, TweenInfo.new(1), {BackgroundTransparency = 1})
+    local textFade = TweenService:Create(logo, TweenInfo.new(1), {TextTransparency = 1})
+    
+    fadeOut:Play()
+    textFade:Play()
+    
+    fadeOut.Completed:Connect(function()
+        introFrame:Destroy() -- حذف الشاشة السوداء نهائياً
+        mainFrame.Visible = true
+        mainFrame:TweenPosition(UDim2.new(0.05, 0, 0.1, 0), "Out", "Back", 0.6)
+    end)
+end)
 
-        for _, v in pairs(game.Players:GetPlayers()) do
-            if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                local tHum = v.Character:FindFirstChild("Humanoid")
-                if tHum and tHum.Health > 0 then
+-- نظام اللحاق والهجوم (القنبلة)
+RunService.Heartbeat:Connect(function()
+    if active and player.Character and player.Character:FindFirstChildOfClass("Tool") then
+        local root = player.Character:FindFirstChild("HumanoidRootPart")
+        if root then
+            local target = nil
+            local dist = 500
+            for _, v in pairs(game.Players:GetPlayers()) do
+                if v ~= player and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
                     local d = (root.Position - v.Character.HumanoidRootPart.Position).Magnitude
-                    if d < bestDist then
-                        bestDist = d
-                        bestTarget = v
-                    end
+                    if d < dist then dist = d target = v end
+                end
+            end
+            if target then
+                player.Character.Humanoid:MoveTo(target.Character.HumanoidRootPart.Position)
+                if (root.Position - target.Character.HumanoidRootPart.Position).Magnitude < 15 then
+                    player.Character:FindFirstChildOfClass("Tool"):Activate()
                 end
             end
         end
-        currentTarget = bestTarget
     end
 end)
 
--- محرك الحركة الفعلي (RenderStepped لضمان السلاسة)
-RunService.RenderStepped:Connect(function()
-    if not enabled or not currentTarget or not currentTarget.Character then return end
-    
-    local char = player.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    local tRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
-    
-    if hum and root and tRoot then
-        hum:MoveTo(tRoot.Position)
-        -- إذا كنت قريب جداً، فعل الأداة (تلقائي)
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool and (root.Position - tRoot.Position).Magnitude < 10 then
-            tool:Activate()
-        end
+-- نظام السحب (Drag)
+local dragging, dragStart, startPos
+toggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true dragStart = input.Position startPos = mainFrame.Position
     end
 end)
-
--- [ تشغيل الانترو المختصر ]
-task.spawn(function()
-    task.wait(2)
-    TweenService:Create(introFrame, TweenInfo.new(1), {BackgroundTransparency = 1}):Play()
-    TweenService:Create(titleLabel, TweenInfo.new(1), {TextTransparency = 1}):Play()
-    task.wait(1)
-    introFrame:Destroy()
-    frame.Visible = true
-    TweenService:Create(frame, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
-    TweenService:Create(button, TweenInfo.new(0.5), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+UIS.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
 end)
-
-warn("SLAXTB: Original Logic Loaded Successfully!")
+UIS.InputEnded:Connect(function(input) dragging = false end)
